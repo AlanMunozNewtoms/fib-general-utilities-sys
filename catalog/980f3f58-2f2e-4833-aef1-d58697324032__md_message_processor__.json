@@ -1,0 +1,13 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {}
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "get-address-response"
+        }
+    },
+    "id": "980f3f58-2f2e-4833-aef1-d58697324032",
+    "version": "5.2.0.0"
+}

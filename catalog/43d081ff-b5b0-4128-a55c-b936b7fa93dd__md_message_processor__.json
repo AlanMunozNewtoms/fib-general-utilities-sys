@@ -1,0 +1,11 @@
+{
+    "inputMessageMetadata": {},
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "AddressValidateRequest"
+        }
+    },
+    "id": "43d081ff-b5b0-4128-a55c-b936b7fa93dd",
+    "version": "5.2.0.0"
+}

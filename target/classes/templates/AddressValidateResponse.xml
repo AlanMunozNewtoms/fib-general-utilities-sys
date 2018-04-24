@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AddressValidateResponse>
+    <Address ID="1">
+        <Address2>1800 6TH AVE N</Address2>
+        <City>BILLINGS</City>
+        <State>MT</State>
+        <Zip5>59101</Zip5>
+        <Zip4>1407</Zip4>
+    </Address>
+</AddressValidateResponse>

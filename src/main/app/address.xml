@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <sub-flow name="verify_address_subFlow">
+        <dw:transform-message doc:name="Map XML Request" metadata:id="43d081ff-b5b0-4128-a55c-b936b7fa93dd">
+            <dw:set-variable variableName="xmlUrlencoded"><![CDATA[%dw 1.0
+%output application/xml
+---
+{
+	AddressValidateRequest @(USERID: p('usps.userId')): {
+		Address @(ID: inboundProperties."http.query.params".address_id as :number): {
+			Address1: inboundProperties."http.query.params".address1 default "",
+			Address2: inboundProperties."http.query.params".address default "",
+			City: inboundProperties."http.query.params".city default "",
+			State: inboundProperties."http.query.params".state default "",
+			Zip5: inboundProperties."http.query.params".zip5 default "",
+			Zip4: inboundProperties."http.query.params".zip4 default ""
+		}
+	}
+}]]></dw:set-variable>
+        </dw:transform-message>
+        
+        <logger message="Address Validate Request: #[message.payloadAs(java.lang.String)]" level="INFO" doc:name="Logger: Address Validate Request"/>
+        <http:request config-ref="HTTP_USPS_Request_Configuration" path="/ShippingAPITest.dll" method="GET" doc:name="HTTP: Address Validate Request">
+            <http:request-builder>
+                <http:query-param paramName="API" value="Verify"/>
+                <http:query-param paramName="XML" value="#[flowVars.xmlUrlencoded]"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="Payload to Java Object">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload]]></dw:set-payload>
+            <dw:set-variable variableName="uspsXmlResponse"><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-variable>
+        </dw:transform-message>
+        <logger message="Address Validate Response: #[message.payloadAs(java.lang.String)]" level="INFO" doc:name="Logger: Address Validate Response"/>
+        <choice doc:name="Choice">
+            <when expression="#[payload.AddressValidateResponse.Address.Error == null]">
+                <dw:transform-message doc:name="Payload to Json" metadata:id="dd681780-1e03-4c89-a008-7edd1a2362a8">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json skipNullOn="objects"
+--- 
+{
+	success: true,
+	address:{
+		id: payload.AddressValidateResponse.Address.@ID,
+		address1:payload.AddressValidateResponse.Address.Address1,
+		address2:payload.AddressValidateResponse.Address.Address2,
+		city:payload.AddressValidateResponse.Address.City,
+		state:payload.AddressValidateResponse.Address.State,
+		zip4:payload.AddressValidateResponse.Address.Zip4,
+		zip5:payload.AddressValidateResponse.Address.Zip5
+	}
+	
+}]]></dw:set-payload>
+                </dw:transform-message>
+
+            </when>
+            <otherwise>
+                <flow-ref name="handle_error_response" doc:name="handle_error_response"/>
+            </otherwise>
+        </choice>
+
+    </sub-flow>
+    <sub-flow name="handle_error_response">
+        <set-property propertyName="http.status" value="500" doc:name="Property: Set http status to 500"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="f4e453e8-d261-4d4a-926f-6f5a4580eaf6">
+            <dw:input-payload/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json skipNullOn="objects"
+--- 
+{
+	error: {
+		errorCode: payload.AddressValidateResponse.Address.Error.Number,
+		errorMessage: payload.AddressValidateResponse.Address.Error.Description,
+		additionalInfo: {
+			source: payload.AddressValidateResponse.Address.Error.Source,
+			helpFile: payload.AddressValidateResponse.Address.Error.HelpFile,
+			helpContext:payload.AddressValidateResponse.Address.Error.HelpContext
+		}
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+
+    </sub-flow>
+</mule>
